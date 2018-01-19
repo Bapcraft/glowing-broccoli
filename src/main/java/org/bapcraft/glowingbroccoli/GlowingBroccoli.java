@@ -1,5 +1,6 @@
 package org.bapcraft.glowingbroccoli;
 
+import org.bapcraft.glowingbroccoli.config.GbRootConfig;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.config.DefaultConfig;
@@ -30,6 +31,9 @@ public class GlowingBroccoli {
 	@DefaultConfig(sharedRoot = true)
 	private ConfigurationLoader<CommentedConfigurationNode> configLoader;
 
+	private GbListener listener;
+	private GbRootConfig config;
+	
 	@Listener
 	public void onPreInit(GamePreInitializationEvent event) {
 		
@@ -37,7 +41,12 @@ public class GlowingBroccoli {
 	
 	@Listener
 	public void onInit(GameInitializationEvent event) {
+		
 		this.logger.info("Congrats on your Glowing Broccoli!");
+		
+		this.listener = new GbListener(this.config, this.game, this.logger);
+		this.eventManager.registerListeners(this, this.listener);
+		
 	}
 	
 }
