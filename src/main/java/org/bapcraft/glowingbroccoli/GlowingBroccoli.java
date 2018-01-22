@@ -44,6 +44,16 @@ public class GlowingBroccoli {
 		
 		this.logger.info("Congrats on your Glowing Broccoli!");
 		
+		// Set up data types.
+		/*DataRegistration.builder()
+			.dataClass(SpawnData.class)
+			.immutableClass(ImmutableSpawnData.class)
+			.builder(new SpawnDataBuilder())
+			.manipulatorId("gb-spawn-data")
+			.dataName("Spawn Data")
+			.buildAndRegister(this);*/
+		
+		// Setup listeners.
 		this.listener = new GbListener(this.config, this.game, this.logger);
 		this.eventManager.registerListeners(this, this.listener);
 		
