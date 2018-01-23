@@ -6,12 +6,8 @@ import java.util.Optional;
 
 import org.spongepowered.api.data.DataContainer;
 import org.spongepowered.api.data.DataHolder;
-import org.spongepowered.api.data.key.Key;
-import org.spongepowered.api.data.manipulator.ImmutableDataManipulator;
-import org.spongepowered.api.data.manipulator.mutable.common.AbstractData;
 import org.spongepowered.api.data.manipulator.mutable.common.AbstractSingleData;
 import org.spongepowered.api.data.merge.MergeFunction;
-import org.spongepowered.api.data.value.BaseValue;
 import org.spongepowered.api.data.value.mutable.Value;
 import org.spongepowered.api.world.World;
 
@@ -25,32 +21,29 @@ public class SpawnData extends AbstractSingleData<Map<String, Vector3d>, SpawnDa
 
 	@Override
 	public Optional<SpawnData> fill(DataHolder dataHolder, MergeFunction overlap) {
-		// TODO Auto-generated method stub
-		return null;
+		dataHolder.get(SpawnData.class).ifPresent(sd -> setValue(sd.getValue()));
+		return Optional.of(this);
 	}
 
 	@Override
 	public Optional<SpawnData> from(DataContainer container) {
-		// TODO Auto-generated method stub
-		return null;
+		// FIXME Make this work.
+		return Optional.of(this);
 	}
 
 	@Override
 	public SpawnData copy() {
-		// TODO Auto-generated method stub
-		return null;
+		return new SpawnData(this.getValue());
 	}
 
 	@Override
 	public int getContentVersion() {
-		// TODO Auto-generated method stub
-		return 0;
+		return 1;
 	}
 
 	@Override
-	protected Value<?> getValueGetter() {
-		// TODO Auto-generated method stub
-		return null;
+	protected Value<Map<String, Vector3d>> getValueGetter() {
+		return this.getValueGetter();
 	}
 
 	@Override
