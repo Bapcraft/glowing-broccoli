@@ -1,7 +1,11 @@
 package org.bapcraft.glowingbroccoli;
 
+import java.util.Optional;
+
 import org.bapcraft.glowingbroccoli.config.GbLobbyConfig;
 import org.bapcraft.glowingbroccoli.config.GbRootConfig;
+import org.bapcraft.glowingbroccoli.data.BroccKeys;
+import org.bapcraft.glowingbroccoli.data.ImmutableSpawnData;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.entity.Entity;
@@ -11,6 +15,8 @@ import org.spongepowered.api.event.entity.DestructEntityEvent;
 import org.spongepowered.api.event.entity.MoveEntityEvent;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
+
+import com.flowpowered.math.vector.Vector3d;
 
 public class GbListener {
 
@@ -39,6 +45,16 @@ public class GbListener {
 				if (w.getName().equals(lc.world) && p.getLocation().getBlockY() < lc.teleportHeight) {
 					
 					// TODO Actually look up their spawn and teleport them.
+					Optional<ImmutableSpawnData> osd = p.get(BroccKeys.SPAWNDATA);
+					if (osd.isPresent()) {
+						
+						Vector3d v = osd.get().getSpawn(w);
+						Location<World> sl = w.getLocation(v);
+						p.setLocationSafely(sl);
+						
+					} else {
+						// TODO Make new spawn data and attach it to the player.
+					}
 					
 				}
 				
