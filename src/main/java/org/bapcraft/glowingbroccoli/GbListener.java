@@ -6,6 +6,7 @@ import org.bapcraft.glowingbroccoli.config.GbLobbyConfig;
 import org.bapcraft.glowingbroccoli.config.GbRootConfig;
 import org.bapcraft.glowingbroccoli.data.BroccKeys;
 import org.bapcraft.glowingbroccoli.data.ImmutableSpawnData;
+import org.bapcraft.glowingbroccoli.data.SpawnData;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.entity.Entity;
@@ -53,7 +54,12 @@ public class GbListener {
 						p.setLocationSafely(sl);
 						
 					} else {
+						
+						this.logger.info("Generating new spawn location for player " + p.getName());
+						this.logger.error("NOT YET IMPLEMENTED!");
+						
 						// TODO Make new spawn data and attach it to the player.
+						
 					}
 					
 				}
@@ -79,7 +85,18 @@ public class GbListener {
 				
 				if (lc.playWorlds.contains(w.getName())) {
 					
-					// TODO Send the player to the lobby.
+					Optional<World> ow = this.game.getServer().getWorld(lc.world);
+					if (ow.isPresent()) {
+						
+						World sw = ow.get();
+						Optional<ImmutableSpawnData> sd = p.get(BroccKeys.SPAWNDATA);						
+						p.setLocationSafely(sw.getLocation(sd.get().getSpawn(sw)));
+						
+						// TODO See how this works with the `/back` command.
+						
+					} else {
+						this.logger.warn("Can't find lobby world " + lc.world + " to teleport player " + p.getName() + " to!");
+					}
 					
 				}
 				
