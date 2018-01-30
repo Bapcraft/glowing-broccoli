@@ -4,9 +4,6 @@ import java.util.Optional;
 
 import org.bapcraft.glowingbroccoli.config.GbLobbyConfig;
 import org.bapcraft.glowingbroccoli.config.GbRootConfig;
-import org.bapcraft.glowingbroccoli.data.BroccKeys;
-import org.bapcraft.glowingbroccoli.data.ImmutableSpawnData;
-import org.bapcraft.glowingbroccoli.data.SpawnData;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.entity.Entity;
@@ -46,11 +43,10 @@ public class GbListener {
 				if (w.getName().equals(lc.world) && p.getLocation().getBlockY() < lc.teleportHeight) {
 					
 					// TODO Actually look up their spawn and teleport them.
-					Optional<ImmutableSpawnData> osd = p.get(BroccKeys.SPAWNDATA);
-					if (osd.isPresent()) {
+					
+					if (false /* TODO */) {
 						
-						Vector3d v = osd.get().getSpawn(w);
-						Location<World> sl = w.getLocation(v);
+						Location<World> sl = null;
 						p.setLocationSafely(sl);
 						
 					} else {
@@ -87,10 +83,6 @@ public class GbListener {
 					
 					Optional<World> ow = this.game.getServer().getWorld(lc.world);
 					if (ow.isPresent()) {
-						
-						World sw = ow.get();
-						Optional<ImmutableSpawnData> sd = p.get(BroccKeys.SPAWNDATA);						
-						p.setLocationSafely(sw.getLocation(sd.get().getSpawn(sw)));
 						
 						// TODO See how this works with the `/back` command.
 						
