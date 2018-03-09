@@ -53,9 +53,8 @@ public class GbListener {
 				
 				if (w.getName().equals(lc.world) && p.getLocation().getBlockY() < lc.teleportHeight) {
 					
-					// TODO Actually look up their spawn and teleport them.
-					
 					File userFile = new File(new File(game.getSavesDirectory().toFile(), "gbdata"), String.format("spawn-%s.json", p.getUniqueId()));
+					UserProfile profile = null;
 					Gson gson = makeGson();
 					
 					if (userFile.exists()) {
@@ -64,12 +63,8 @@ public class GbListener {
 							
 							// Load the user data from file.
 							FileReader fr = new FileReader(userFile);
-							UserProfile profile = gson.fromJson(fr, UserProfile.class);
+							profile = gson.fromJson(fr, UserProfile.class);
 							fr.close();
-							
-							// Then spawn them there.
-							Location<World> sl = w.getLocation(profile.x, profile.y, profile.z);
-							p.setLocationSafely(sl);
 							
 						} catch (JsonSyntaxException | JsonIOException | IOException ex) {
 							this.logger.error("Error spawning player " + p.getName() + "!", ex);
@@ -86,19 +81,33 @@ public class GbListener {
 						double x = wb.getCenter().getX() + (wb.getDiameter() - lc.borderBuffer) * (r.nextDouble() * 2D - 1D);
 						double z = wb.getCenter().getZ() + (wb.getDiameter() - lc.borderBuffer) * (r.nextDouble() * 2D - 1D);
 						int y = w.getHighestYAt((int) x, (int) z);
-						UserProfile created = new UserProfile((int) x, y, (int) z);
+						profile = new UserProfile((int) x, y, (int) z);
 						
 						try {
 
 							// Now just write it to file.
 							FileWriter fw = new FileWriter(userFile);
-							fw.write(gson.toJson(created));
+							fw.write(gson.toJson(profile));
 							fw.close();
 							
 						} catch (IOException ex) {
 							this.logger.error("Error writing new player spawn for " + p.getName() + "!", ex);
-							p.sendMessage(Text.of("Error finding spawn location, talk to an administrator."));
+							p.sendMessage(Text.of("Error saving spawn location, talk to an administrator immediately!"));
 						}
+						
+					}
+					
+					if (profile != null) {
+						
+						// Then actually spawn the player.
+						Location<World> sl = w.getLocation(profile.x, profile.y, profile.z);
+						p.setLocationSafely(sl);
+						
+					} else {
+						
+						// Logging messages?
+						this.logger.error("User profile was null when trying to load player spawn.");
+						p.sendMessage(Text.of("Something bad happened, good luck."));
 						
 					}
 					
