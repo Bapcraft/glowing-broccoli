@@ -11,7 +11,7 @@ public class GbLobbyConfig {
 	@Setting(value = "height")
 	public int teleportHeight = 32;
 	
-	@Setting
+	@Setting(value = "borderBuffer")
 	public int borderBuffer = 128;
 	
 	@Setting(value = "lobby")

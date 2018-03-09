@@ -13,15 +13,17 @@ import org.bapcraft.glowingbroccoli.data.UserProfile;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.entity.Entity;
+import org.spongepowered.api.entity.Transform;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
-import org.spongepowered.api.event.entity.DestructEntityEvent;
 import org.spongepowered.api.event.entity.MoveEntityEvent;
+import org.spongepowered.api.event.entity.living.humanoid.player.RespawnPlayerEvent;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.WorldBorder;
 
+import com.flowpowered.math.vector.Vector3d;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -101,6 +103,7 @@ public class GbListener {
 						
 						// Then actually spawn the player.
 						Location<World> sl = w.getLocation(profile.x, profile.y, profile.z);
+						p.setVelocity(Vector3d.ZERO);
 						p.setLocationSafely(sl);
 						
 					} else {
@@ -120,14 +123,14 @@ public class GbListener {
 	}
 	
 	@Listener
-	public void onPlayerDeath(DestructEntityEvent.Death event) {
+	public void onPlayerRespawn(RespawnPlayerEvent event) {
 		
 		Entity e = event.getTargetEntity();
 		
 		if (e instanceof Player) {
 			
 			Player p = (Player) e;
-			Location<World> l = p.getLocation();
+			Location<World> l = event.getFromTransform().getLocation();
 			World w = l.getExtent();
 			
 			for (GbLobbyConfig lc : this.config.worldConfigs) {
@@ -137,7 +140,10 @@ public class GbListener {
 					Optional<World> ow = this.game.getServer().getWorld(lc.world);
 					if (ow.isPresent()) {
 						
-						// TODO See how this works with the `/back` command.
+						// We're just gonna hope that /back still works after this is done.
+						World sw = ow.get();
+						Transform<World> st = new Transform<>(sw.getSpawnLocation(), Vector3d.createDirectionRad(0D, Math.random() * 2 * Math.PI), Vector3d.ONE);
+						event.setToTransform(st);
 						
 					} else {
 						this.logger.warn("Can't find lobby world " + lc.world + " to teleport player " + p.getName() + " to!");
