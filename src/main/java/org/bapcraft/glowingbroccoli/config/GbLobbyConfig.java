@@ -8,8 +8,11 @@ import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 @ConfigSerializable
 public class GbLobbyConfig {
 
-	@Setting(value = "hight")
+	@Setting(value = "height")
 	public int teleportHeight = 32;
+	
+	@Setting
+	public int borderBuffer = 128;
 	
 	@Setting(value = "lobby")
 	public String world;
