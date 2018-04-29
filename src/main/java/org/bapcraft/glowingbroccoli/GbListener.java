@@ -4,10 +4,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Optional;
 import java.util.Random;
 
-import org.bapcraft.glowingbroccoli.config.GbLobbyConfig;
 import org.bapcraft.glowingbroccoli.config.GbRootConfig;
 import org.bapcraft.glowingbroccoli.data.UserProfile;
 import org.slf4j.Logger;
@@ -16,7 +14,6 @@ import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.Transform;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
-import org.spongepowered.api.event.entity.MoveEntityEvent;
 import org.spongepowered.api.event.entity.living.humanoid.player.RespawnPlayerEvent;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.Location;
@@ -42,87 +39,6 @@ public class GbListener {
 	}
 	
 	@Listener
-	public void onPlayerMove(MoveEntityEvent event) {
-		
-		Entity e = event.getTargetEntity();
-		
-		if (e instanceof Player) {
-			
-			Player p = (Player) e;
-			World w = p.getLocation().getExtent();
-			
-			for (GbLobbyConfig lc : this.config.worldConfigs) {
-				
-				if (w.getName().equals(lc.world) && p.getLocation().getBlockY() < lc.teleportHeight) {
-					
-					File userFile = new File(new File(game.getSavesDirectory().toFile(), "gbdata"), String.format("spawn-%s.json", p.getUniqueId()));
-					UserProfile profile = null;
-					Gson gson = makeGson();
-					
-					if (userFile.exists()) {
-						
-						try {
-							
-							// Load the user data from file.
-							FileReader fr = new FileReader(userFile);
-							profile = gson.fromJson(fr, UserProfile.class);
-							fr.close();
-							
-						} catch (JsonSyntaxException | JsonIOException | IOException ex) {
-							this.logger.error("Error spawning player " + p.getName() + "!", ex);
-							p.sendMessage(Text.of("Error spawning player, talk to an administrator."));
-						}
-						
-					} else {
-						
-						this.logger.info("Generating new spawn location for player " + p.getName());
-						
-						// Do a bunch of math to get create a world spawn thingy.
-						WorldBorder wb = w.getWorldBorder();
-						Random r = new Random();
-						double x = wb.getCenter().getX() + (wb.getDiameter() - lc.borderBuffer) * (r.nextDouble() * 2D - 1D);
-						double z = wb.getCenter().getZ() + (wb.getDiameter() - lc.borderBuffer) * (r.nextDouble() * 2D - 1D);
-						int y = w.getHighestYAt((int) x, (int) z);
-						profile = new UserProfile((int) x, y, (int) z);
-						
-						try {
-
-							// Now just write it to file.
-							FileWriter fw = new FileWriter(userFile);
-							fw.write(gson.toJson(profile));
-							fw.close();
-							
-						} catch (IOException ex) {
-							this.logger.error("Error writing new player spawn for " + p.getName() + "!", ex);
-							p.sendMessage(Text.of("Error saving spawn location, talk to an administrator immediately!"));
-						}
-						
-					}
-					
-					if (profile != null) {
-						
-						// Then actually spawn the player.
-						Location<World> sl = w.getLocation(profile.x, profile.y, profile.z);
-						p.setVelocity(Vector3d.ZERO);
-						p.setLocationSafely(sl);
-						
-					} else {
-						
-						// Logging messages?
-						this.logger.error("User profile was null when trying to load player spawn.");
-						p.sendMessage(Text.of("Something bad happened, good luck."));
-						
-					}
-					
-				}
-				
-			}
-			
-		}
-		
-	}
-	
-	@Listener
 	public void onPlayerRespawn(RespawnPlayerEvent event) {
 		
 		Entity e = event.getTargetEntity();
@@ -130,30 +46,79 @@ public class GbListener {
 		if (e instanceof Player) {
 			
 			Player p = (Player) e;
-			Location<World> l = event.getFromTransform().getLocation();
-			World w = l.getExtent();
+			Location<World> l = event.getToTransform().getLocation();
+			World w = event.getToTransform().getExtent();
 			
-			for (GbLobbyConfig lc : this.config.worldConfigs) {
+			if (event.isBedSpawn()) {
+				return; // We don't do anything here.
+			}
+			
+			try {
 				
-				if (lc.playWorlds.contains(w.getName())) {
-					
-					Optional<World> ow = this.game.getServer().getWorld(lc.world);
-					if (ow.isPresent()) {
-						
-						// We're just gonna hope that /back still works after this is done.
-						World sw = ow.get();
-						Transform<World> st = new Transform<>(sw.getSpawnLocation(), Vector3d.createDirectionRad(0D, Math.random() * 2 * Math.PI), Vector3d.ONE);
-						event.setToTransform(st);
-						
-					} else {
-						this.logger.warn("Can't find lobby world " + lc.world + " to teleport player " + p.getName() + " to!");
-					}
-					
+				// Actually set the spawn location.
+				UserProfile profile = this.findUserProfileForWorld(w, p);
+				if (profile == null) {
+					this.logger.error("user profile is null, this should never happen");
 				}
 				
+				Vector3d pos = new Vector3d(profile.x, w.getHighestYAt(profile.x, profile.z), profile.z);
+				Vector3d dir = Vector3d.createDirectionDeg(Math.random() * 360D, 0D);
+				Transform<World> changedSpawn = new Transform<>(w, pos, dir);
+				event.setToTransform(changedSpawn);
+				
+			} catch (IOException ex) {
+				this.logger.warn("Error loading user profile from file.", ex);
+				p.sendMessage(Text.of("Error setting custom spawn location.  Tell an admin to check the logs!  (Note the time!)"));
 			}
 			
 		}
+		
+	}
+	
+	private UserProfile findUserProfileForWorld(World w, Player p) throws IOException {
+
+		File userFile = new File(new File(game.getSavesDirectory().toFile(), "gbdata"), String.format("spawn-%s.json", p.getUniqueId()));
+		UserProfile profile = null;
+		Gson gson = makeGson();
+		
+		if (userFile.exists()) {
+			
+			try (FileReader fr = new FileReader(userFile)) {
+				profile = gson.fromJson(fr, UserProfile.class);
+			} catch (JsonSyntaxException | JsonIOException ex) {
+				throw new IOException("Error parsing JSON", ex);
+			}
+			
+		} else {
+			
+			this.logger.info("Generating new spawn location for player " + p.getName());
+			
+			// Do a bunch of math to get create a world spawn thingy.
+			Random r = new Random();
+			WorldBorder wb = w.getWorldBorder();
+			double diameter = Math.min(wb != null ? wb.getDiameter() : 1e6D, 10000D);
+			double centerX = wb != null ? wb.getCenter().getX() : w.getSpawnLocation().getX();
+			double centerZ = wb != null ? wb.getCenter().getZ() : w.getSpawnLocation().getZ();
+			double x = centerX + (diameter - this.config.borderBuffer) * (r.nextDouble() * 2D - 1D);
+			double z = centerZ + (diameter - this.config.borderBuffer) * (r.nextDouble() * 2D - 1D);
+			double y = 120; // TODO Make this actually work out, but later.
+			profile = new UserProfile((int) x, (int) y, (int) z);
+			
+			// Set up the chunk to generate now.
+			w.newChunkPreGenerate(new Vector3d(x, y, z), 16).owner(this.game.getPluginManager().getPlugin("glowbroc").get()).logger(this.logger).start();
+			
+			this.logger.info(String.format("Random spawn for %s is (%s, %s), from center of (%s, %s) and diameter %s.", p.getName(), x, z, centerX, centerZ, diameter));
+			
+			// Now just write it to file.
+			userFile.getParentFile().mkdirs();
+			userFile.createNewFile();
+			try (FileWriter fw = new FileWriter(userFile)) {
+				fw.write(gson.toJson(profile));
+			}
+			
+		}
+		
+		return profile;
 		
 	}
 	
