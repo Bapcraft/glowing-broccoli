@@ -4,13 +4,18 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bapcraft.glowingbroccoli.config.GbRootConfig;
 import org.bapcraft.glowingbroccoli.data.UserProfile;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.data.manipulator.mutable.PotionEffectData;
+import org.spongepowered.api.effect.potion.PotionEffect;
+import org.spongepowered.api.effect.potion.PotionEffectTypes;
 import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.Transform;
 import org.spongepowered.api.entity.living.player.Player;
@@ -34,6 +39,8 @@ public class GbListener {
 	private Game game;
 	private Logger logger;
 	
+	private Set<UUID> needsBuffs = new HashSet<>();
+	
 	public GbListener(GbRootConfig c, Game g, Logger l) {
 		this.config = c;
 		this.game = g;
@@ -41,7 +48,7 @@ public class GbListener {
 	}
 	
 	@Listener
-	public void onPlayerJoin(ClientConnectionEvent.Login event) {
+	public void onPlayerLogin(ClientConnectionEvent.Login event) {
 		
 		User u = event.getTargetUser();
 		World w = event.getToTransform().getExtent();
@@ -58,13 +65,50 @@ public class GbListener {
 				return;
 			}
 			
+			// Set up the chunks to generate so we can hopefully catch the player early.
 			w.newChunkPreGenerate(new Vector3d(profile.x, profile.y, profile.z), 16)
 				.owner(this.game.getPluginManager().getPlugin("glowbroc").get())
 				.logger(this.logger)
 				.chunksPerTick(0) // As fast as possible.
 				.start();
 			
+			// Actually set the spawn location.
 			event.setToTransform(createNewTransformForUserProfile(w, profile));
+			
+			// Make sure to buff the player once they actually join in case there's a fall.
+			this.needsBuffs.add(u.getUniqueId());
+			
+		}
+		
+	}
+	
+	@Listener
+	public void onPlayerJoin(ClientConnectionEvent.Join event) {
+		
+		Player p = event.getTargetEntity();
+		
+		// We need to give the player some extra status effects in case their random spawn is somewhere pathological.
+		if (this.needsBuffs.contains(p.getUniqueId())) {
+			
+			this.needsBuffs.remove(p.getUniqueId());
+			
+			PotionEffect regen = PotionEffect.builder()
+					.potionType(PotionEffectTypes.REGENERATION)
+					.duration(30 * 20)
+					.amplifier(3)
+					.build();
+			
+			PotionEffect resist = PotionEffect.builder()
+					.potionType(PotionEffectTypes.RESISTANCE)
+					.duration(30 * 20)
+					.amplifier(5)
+					.build();
+			
+			// Actually apply the status effects.
+			PotionEffectData ped = p.getOrCreate(PotionEffectData.class).get();
+			ped.addElement(regen);
+			ped.addElement(resist);
+			p.offer(ped);
 			
 		}
 		
@@ -86,7 +130,6 @@ public class GbListener {
 			
 			try {
 				
-				// Actually set the spawn location.
 				UserProfile profile = this.findUserProfileForWorld(w, p.getUniqueId());
 				if (profile == null) {
 					this.logger.error("user profile is null, this should never happen");
@@ -94,8 +137,8 @@ public class GbListener {
 					return;
 				}
 				
-				Transform<World> changedSpawn = createNewTransformForUserProfile(w, profile);
-				event.setToTransform(changedSpawn);
+				// Actually set the spawn location.
+				event.setToTransform(createNewTransformForUserProfile(w, profile));
 				
 			} catch (IOException ex) {
 				this.logger.warn("Error loading user profile from file.", ex);
@@ -107,7 +150,8 @@ public class GbListener {
 	}
 	
 	private static Transform<World> createNewTransformForUserProfile(World w, UserProfile up) {
-		Vector3d pos = new Vector3d(up.x, w.getHighestYAt(up.x, up.z), up.z);
+		int maxY = w.getHighestYAt(up.x, up.z);
+		Vector3d pos = new Vector3d(up.x, maxY >= 32 ? maxY : 256, up.z);
 		Vector3d dir = Vector3d.createDirectionDeg(Math.random() * 360D, 0D);
 		return new Transform<>(w, pos, dir);
 	}
@@ -140,6 +184,7 @@ public class GbListener {
 		
 		if (userFile.exists()) {
 			
+			// Just read it, dumbly.
 			try (FileReader fr = new FileReader(userFile)) {
 				profile = gson.fromJson(fr, UserProfile.class);
 			} catch (JsonSyntaxException | JsonIOException ex) {
