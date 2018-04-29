@@ -165,11 +165,11 @@ public class GbListener {
 		// Do a bunch of math to get create a world spawn thingy.
 		Random r = new Random();
 		WorldBorder wb = w.getWorldBorder();
-		double diameter = Math.min(wb != null ? wb.getDiameter() : 1e6D, 10000D);
+		double radius = Math.min(wb != null ? wb.getDiameter() : 1e6D, 10000D) / 2D;
 		double centerX = wb != null ? wb.getCenter().getX() : w.getSpawnLocation().getX();
 		double centerZ = wb != null ? wb.getCenter().getZ() : w.getSpawnLocation().getZ();
-		double x = centerX + (diameter - this.config.borderBuffer) * (r.nextDouble() * 2D - 1D);
-		double z = centerZ + (diameter - this.config.borderBuffer) * (r.nextDouble() * 2D - 1D);
+		double x = centerX + (radius - this.config.borderBuffer) * (r.nextDouble() * 2D - 1D);
+		double z = centerZ + (radius - this.config.borderBuffer) * (r.nextDouble() * 2D - 1D);
 		double y = 120; // TODO Make this actually work out, but later.
 		
 		return new UserProfile((int) x, (int) y, (int) z);
