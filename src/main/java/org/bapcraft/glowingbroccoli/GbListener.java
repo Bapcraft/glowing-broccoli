@@ -65,13 +65,6 @@ public class GbListener {
 				return;
 			}
 			
-			// Set up the chunks to generate so we can hopefully catch the player early.
-			w.newChunkPreGenerate(new Vector3d(profile.x, profile.y, profile.z), 16)
-				.owner(this.game.getPluginManager().getPlugin("glowbroc").get())
-				.logger(this.logger)
-				.chunksPerTick(0) // As fast as possible.
-				.start();
-			
 			// Actually set the spawn location.
 			event.setToTransform(createNewTransformForUserProfile(w, profile));
 			
