@@ -82,27 +82,8 @@ public class GbListener {
 		
 		// We need to give the player some extra status effects in case their random spawn is somewhere pathological.
 		if (this.needsBuffs.contains(p.getUniqueId())) {
-			
 			this.needsBuffs.remove(p.getUniqueId());
-			
-			PotionEffect regen = PotionEffect.builder()
-					.potionType(PotionEffectTypes.REGENERATION)
-					.duration(30 * 20)
-					.amplifier(3)
-					.build();
-			
-			PotionEffect resist = PotionEffect.builder()
-					.potionType(PotionEffectTypes.RESISTANCE)
-					.duration(30 * 20)
-					.amplifier(5)
-					.build();
-			
-			// Actually apply the status effects.
-			PotionEffectData ped = p.getOrCreate(PotionEffectData.class).get();
-			ped.addElement(regen);
-			ped.addElement(resist);
-			p.offer(ped);
-			
+			this.applySafetyEffects(p, 30 * 20); // 30 seconds
 		}
 		
 	}
@@ -132,6 +113,7 @@ public class GbListener {
 				
 				// Actually set the spawn location.
 				event.setToTransform(createNewTransformForUserProfile(w, profile));
+				this.applySafetyEffects(p, 5 * 20); // 5 seconds
 				
 			} catch (IOException ex) {
 				this.logger.warn("Error loading user profile from file.", ex);
@@ -139,6 +121,28 @@ public class GbListener {
 			}
 			
 		}
+		
+	}
+	
+	private void applySafetyEffects(Player p, int ticks) {
+		
+		PotionEffect regen = PotionEffect.builder()
+				.potionType(PotionEffectTypes.REGENERATION)
+				.duration(ticks)
+				.amplifier(3)
+				.build();
+		
+		PotionEffect resist = PotionEffect.builder()
+				.potionType(PotionEffectTypes.RESISTANCE)
+				.duration(ticks)
+				.amplifier(5)
+				.build();
+		
+		// Actually apply the status effects.
+		PotionEffectData ped = p.getOrCreate(PotionEffectData.class).get();
+		ped.addElement(regen);
+		ped.addElement(resist);
+		p.offer(ped);
 		
 	}
 	
